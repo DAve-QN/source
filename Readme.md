@@ -1,8 +1,8 @@
 This is the implementation of paper **DAve-QN: A Distributed Averaged Quasi-Newton Method with Local
-Superlinear Convergence Rate** accepted at the 23rd International Conference on
-Artificial Intelligence and Statistics (AISTATS-2020). 
+Superlinear Convergence Rate**, accepted at the 23rd International Conference on
+Artificial Intelligence and Statistics ([AISTATS-2020](https://www.aistats.org/ )). 
 
-This is a high performance implementation in C using [MPI]("https://mpitutorial.com/tutorials/"). In order to compare to the state-of-the-art, we have implemented [GIANT]("https://papers.nips.cc/paper/7501-giant-globally-improved-approximate-newton-method-for-distributed-optimization.pdf"), [DAve-RPG]("http://proceedings.mlr.press/v80/mishchenko18a/mishchenko18a.pdf") and [DANE]("https://arxiv.org/pdf/1312.7853.pdf") with all needed scripts to run.  
+This is a high performance implementation in C using [MPI](https://mpitutorial.com/tutorials/). In order to compare to the state-of-the-art, we have implemented [GIANT](https://papers.nips.cc/paper/7501-giant-globally-improved-approximate-newton-method-for-distributed-optimization.pdf), [DAve-RPG](http://proceedings.mlr.press/v80/mishchenko18a/mishchenko18a.pdf) and [DANE](https://arxiv.org/pdf/1312.7853.pdf) with all needed scripts to run.  
 
 We also provide a MATLAB implementation of DAve-QN for further use.
 
@@ -56,7 +56,7 @@ $ sh test.sh
 ```
 
 
-NOTE: you can find all the scripts for tests in the `scripts` directory.
+> **_NOTE:_** you can find all the scripts for tests in the `scripts` directory.
 
 ## MATLAB Implementation
 We also provide a MATLAB implementation for DAve-QN which you can find it in "MATLAB Code" directory. You will need LIBSVM [LIBSVM](https://www.csie.ntu.edu.tw/~cjlin/libsvm/ ""). 
@@ -77,7 +77,7 @@ $ java -jar Split.jar path filename nrows nparts
 
 where path indicates the directory that contains the main dataset, filename is the dataset name, nrows is the number of rows in the dataset and nparts is the number of parts.
 
-NOTE: you can find `mnistSplit.sh` in the scripts folder and run `sh mnistSplit.sh`.
+> **_NOTE:_** you can find `mnistSplit.sh` in the scripts folder and run `sh mnistSplit.sh`.
 
 ## Output
 
@@ -86,7 +86,7 @@ The output of the code contains three columns. First column is the time in milli
 
 ## Troubleshooting
 
-If you get an error as  “mpirun was unable to find the specified executable file...”, most likely it means that you have not compile the code properly. Make sure you have compiled the code using “make” command without any error.
+If you get an error as  `mpirun was unable to find the specified executable file...`, most likely it means that you have not compile the code properly. Make sure you have compiled the code using “make” command without any error.
 
 
-If you get an error as “File not found!”, this means that one of the needed files for the dataset is not present. Make sure you put the dataset in the proper destination and you split it before running the code. Please refer to “How to split a dataset” section. 
+If you get an error as `File not found!`, this means that one of the needed files for the dataset is not present. Make sure you put the dataset in the proper destination and you split it before running the code. Please refer to **How to split a dataset** section. 
