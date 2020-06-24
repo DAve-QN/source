@@ -10,6 +10,7 @@ double val, x;
 char* line;
 int max_line_len = 1024*10;
 
+// helper function
 void printArray(double *arr, int n){
     int i;
     for (i = 0; i < n; ++i)
@@ -55,8 +56,9 @@ void getMaxMin(int *colidx, double *vals, int d, int nnz, int m, double *max, do
         if(min[i]>1e8)
             min[i]=0.0;
     }
-    //printArray(min,d);
 }
+
+// normalize the dataset between 0 and 1
 void normalize(int *colidx, double *vals, int d, int nnz, double* max, double *min){
     int i;
 
@@ -84,6 +86,7 @@ void xpy(double *x, double *y, double *s, int d){
             cblas_daxpy (d, 1, x, 1, s, 1);
 }
 
+// the gradient function for logistic regression
 void gradfun(double *x,
     double *vals,
     int *colidx,
@@ -106,10 +109,8 @@ void gradfun(double *x,
     double *v = (double*) malloc (m_local*sizeof(double));
     double *e = (double*) malloc (m_local*sizeof(double));
     double *ep1 = (double*) malloc (m_local*sizeof(double));
+    
     // op: Ax = A*x
-   
-    // mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,
-    //     alpha, csrA, descr, x, zero, Ax);
     char trans ='N';
     mkl_dcsrmv (&trans
         , &m_local
@@ -123,8 +124,10 @@ void gradfun(double *x,
                 , x
                  , &zero
                   , Ax );
+
     // op: v = Ax.*y
     vdMul( m_local, Ax, y, v );
+
     // op: e = exp(v)
     vdExp( m_local, v, e );
 
@@ -137,11 +140,8 @@ void gradfun(double *x,
     //op: v = y.*ep1
     vdMul( m_local, y, ep1, v );
     
-    // op: g = -A*vs
-    // mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,
-    //      nalpha, csrA, descr, v, zero, g);
     
-    //
+    // op: g = -A*vs
     char transa ='T';
     mkl_dcsrmv (&transa 
         , &m_local
@@ -158,12 +158,14 @@ void gradfun(double *x,
 
 
 
-    double a = (1.0*m_local)/m*lambda;
-    double b = 1.0/m;
+    // double a = (1.0*m_local)/m*lambda;
+    // double b = 1.0/m;
+    double a = lambda;
+    double b = 1.0/m_local;
+
     cblas_daxpby (d, a, x, inc, b, g, inc);
     //printArray(g,d);
 
-    //free(gtemp);
     free(v);
     free(e);
     free(ep1);
@@ -171,6 +173,7 @@ void gradfun(double *x,
 
 }
 
+// objective function for logistic regression
 double objective_fun(double *x,
     double *vals,
     int *colidx,
@@ -187,12 +190,8 @@ double objective_fun(double *x,
     double *nAx = (double*) malloc (m*sizeof(double));
     double *v = (double*) malloc (m*sizeof(double));
     double *e = (double*) malloc (m*sizeof(double));
+
     // op: nAx = -A*x
-    // op: v = nAx.*y
-    // op: e = exp(v)
-    // mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,
-    //     nalpha, csrA, descr, x, zero, nAx);
-    
     char transa ='N';
     mkl_dcsrmv (&transa 
         , &m
@@ -207,10 +206,11 @@ double objective_fun(double *x,
                  , &zero
                   , nAx );
 
+    // op: v = nAx.*y
     vdMul( m, nAx, y, v );
-    vdExp( m, v, e );
 
-    
+    // op: e = exp(v)
+    vdExp( m, v, e );
 
     // op: v = ln(e+1)
     vdLog1p( m, e, v );
@@ -232,6 +232,7 @@ double objective_fun(double *x,
 }
 
 
+// helper function to read dataset
 static char* readline(FILE *input)
 {
   int len;
@@ -292,61 +293,42 @@ void readgg(char* fname, int *rowidx,int *colidx,
           }
 
           cols = (int) strtol(index,&endptr,10);
-          // if(cols==NULL){
-          //   printf("WTF3\n");
-          // }
-          //colidx.push_back(cols-1);
           colidx[count_colidx]=cols;
           nnzArray[cols-1]++;
-            //printf("%d\n",cols );
 
           val =  strtod(value, &endptr);
-          // if(val==NULL){
-          //   printf("WTF4\n");
-          // }
-          //vals.push_back(val);
           vals[count_colidx]=val;
-          //printf("%d\n",count_colidx );
         count_colidx++;
           i++;
         }
       count_rowidx++;
       rowidx[count_rowidx]=i+1;
-    //printf("%d\n",count_rowidx );
       y[count_rowidx-1]=x;
-      // if(x==2){
-      //         y[count_rowidx-1]=1;
-      // }
-      // else{
 
-      //   y[count_rowidx-1]=-1;
-      // }
     }
     *nnz_local = count_colidx;
     *m_local = count_rowidx;
   fclose(file);
-  //printf("DONE\n");
 }
 
 
 int main(int argc, char** argv) {
     MPI_Init(&argc,&argv);
     // Initialize the MPI environment
+    
     int world_size;
     int rank;
 
     struct timeval start,end;
 
-    //MPI_Init(NULL, NULL);
-    //MPI_Init_thread(0,0, MPI_THREAD_FUNNELED, &provided);
     // Get the number of processes and rank
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
 
     // Print off a hello world message
-    printf("rank %d: started\n",
-     rank);
+    printf("rank %d: started\n", rank);
+    
     if(world_size<2){
         printf("%s\n", "There should be at least two processors!");
         MPI_Finalize();
@@ -354,17 +336,16 @@ int main(int argc, char** argv) {
     }
 
 
-
 // INPUT
     if(argc<9){
-        printf("Input Format: pathname nrows nnz ncols iterations lambda eta [freq of printing]\n");
+        printf("Input Format: pathname #rows #nnzs #cols #iterations lambda gamma freq\n");
         MPI_Finalize();
         return 0;
     }
     char* pathName = argv[1];
     int m = atoi(argv[2]);
     int nnz = atoi(argv[3]);
-    int d = atoi(argv[4]);
+    long long d = atoll(argv[4]);
     int Iter = atoi(argv[5]);
     double lambda = atof(argv[6]);
     double eta = atof(argv[7]);
@@ -405,8 +386,6 @@ int main(int argc, char** argv) {
     memset(nnzArray,0,d*sizeof(int));
 
     // Descriptor of main sparse matrix properties
-    //struct matrix_descr descrA;
-    //descrA.type = SPARSE_MATRIX_TYPE_GENERAL;
     descrA[0]='G';
     descrA[3]='F';
     
@@ -420,8 +399,7 @@ int main(int argc, char** argv) {
     memset(g, 0, sizeof(double)*d);
     memset(gold, 0, sizeof(double)*d);
     memset(gsum, 0, sizeof(double)*d);
-    // handle to input matrix
-    //sparse_matrix_t       csrA;
+
 
     //Initialization
     double *x = (double*) malloc (d*sizeof(double));
@@ -447,14 +425,15 @@ int main(int argc, char** argv) {
     double *minAll = (double *) malloc(d*sizeof(double));
     if(rank>0){
 
-        for ( i = 0; i < d*d; ++i)
+        long long j = 0;
+        for ( j = 0; j < d*d; ++j)
         {
-            B[i]=0;
+            B[j]=0;
         }
 
-        for ( i = 0; i < d; ++i)
+        for ( j = 0; j < d; ++j)
         {
-            B[i*(d+1)] = 1.0;
+            B[j*(d+1)] = 1.0;
         }
 
 
@@ -464,9 +443,6 @@ int main(int argc, char** argv) {
         strcat(pathName,buf);
 
         readgg(pathName, rowidx, colidx, vals, y, &nnz_local, &m_local, nnzArray);
-        //printArray(nnzArray,d);
-        // Create handle with matrix stored in CSR format
-        
         // normalizing the matrix between 0 and 1
         // first we get the max and min of local dataset
         // then we reduce it to get the overall max and min
@@ -487,13 +463,6 @@ int main(int argc, char** argv) {
         // which contain the max and min for each column
 
         normalize(colidx, vals, d, nnz_local, maxAll, minAll);
-        // mkl_sparse_d_create_csr ( &csrA, SPARSE_INDEX_BASE_ONE,
-        //                             m_local,  // number of rows
-        //                             d,  // number of cols
-        //                             rowidx,
-        //                             rowidx+1,
-        //                             colidx,
-        //                             vals );
         
         // initial gradients 
         gradfun(x , vals,colidx,rowidx, descrA, y, d ,m, m_local,lambda, g);
@@ -506,18 +475,11 @@ int main(int argc, char** argv) {
         // we don't need this for performance evaluation:
         readgg(pathName, rowidx, colidx, vals, y, &nnz_local, &m_local,nnzArray);
         normalize(colidx, vals, d, nnz_local, maxAll, minAll);
-        // Create handle with matrix stored in CSR format
-        // mkl_sparse_d_create_csr ( &csrA, SPARSE_INDEX_BASE_ONE,
-        //                             m_local,  // number of rows
-        //                             d,  // number of cols
-        //                             rowidx,
-        //                             rowidx+1,
-        //                             colidx,
-        //                             vals );
-        
-        for (i = 0; i < d; ++i)
+
+        long long j = 0;
+        for (j = 0; j < d; ++j)
         {
-            B[i*(d+1)] = 1.0/(world_size-1);
+            B[j*(d+1)] = 1.0/(world_size-1);
         }
     }
 
@@ -526,10 +488,8 @@ int main(int argc, char** argv) {
 
     // new initial condition: which is one step gradeint descent
     double neta= -eta/(world_size-1);
-    if(rank>0){
-            cblas_daxpy (d, neta, gsum, 1, x, 1);
-    }
-    
+    cblas_daxpy (d, neta, gsum, 1, x, 1);
+  
     //start timing
     if(rank ==0){
         memcpy (cumX, x, d*sizeof(double)); 
@@ -538,6 +498,7 @@ int main(int argc, char** argv) {
     }
     
     if(rank>0){
+        int dim = (int) d;
         double *s =(double*) malloc (d*sizeof(double));
         double *ys =(double*) malloc (d*sizeof(double));
         double *q =(double*) malloc (d*sizeof(double));
@@ -558,23 +519,23 @@ int main(int argc, char** argv) {
             xpy(g, gold, ys, d);
             
             // q = B*s
-            dgemv(&trans, &d, &d, &one, B, &d, s, &inc, &zero, q, &inc);
+            dgemv(&trans, &dim, &dim, &one, B, &dim, s, &inc, &zero, q, &inc);
             
-            alpha = ddot(&d, ys, &inc, s, &inc);
-            beta = ddot(&d, s, &inc, q, &inc);  
+            alpha = ddot(&dim, ys, &inc, s, &inc);
+            beta = ddot(&dim, s, &inc, q, &inc);  
             double alpha_inv = 1.0/alpha;
             double beta_ninv = -1.0/beta;
 
             // u1 = B*xold
-            dgemv(&trans, &d, &d, &one, B, &d, xold, &inc, &zero, u1, &inc);
+            dgemv(&trans, &dim, &dim, &one, B, &dim, xold, &inc, &zero, u1, &inc);
             //printf("rank %d:  u1 done\n",rank);
 
             //rank 1 update of B > B = B + y'y/alpha - q'q/beta
-            dger(&d, &d, &alpha_inv, ys, &inc, ys, &inc, B, &d);
-            dger(&d, &d, &beta_ninv, q, &inc, q, &inc, B, &d);
+            dger(&dim, &dim, &alpha_inv, ys, &inc, ys, &inc, B, &dim);
+            dger(&dim, &dim, &beta_ninv, q, &inc, q, &inc, B, &dim);
 
             // u2 = B*x
-            dgemv(&trans, &d, &d, &one, B, &d, x, &inc, &zero, u2, &inc);
+            dgemv(&trans, &dim, &dim, &one, B, &dim, x, &inc, &zero, u2, &inc);
             //printf("rank %d:  u2 done\n",rank);
 
             // u = u2-u1
@@ -584,8 +545,6 @@ int main(int argc, char** argv) {
             // gold = g
             memcpy (xold, x, d*sizeof(double)); 
             memcpy (gold, g, d*sizeof(double)); 
-                        //printArray(xold,d);
-
 
             // send results to the master
             memcpy (update, u, d*sizeof(double));
@@ -594,7 +553,6 @@ int main(int argc, char** argv) {
             update[3*d] = alpha;
             update[3*d+1] = beta; 
             MPI_Request request;
-            //printf("rank %d:  calculation done\n",rank);
 
             MPI_Isend(
                 update,
@@ -605,7 +563,7 @@ int main(int argc, char** argv) {
                 MPI_COMM_WORLD,
                 &request);
             MPI_Request_free(&request);
-            //printf("rank %d:  send update to master - waiting to Recv x\n",rank);
+            
             // recieve x
             MPI_Status status;
             MPI_Recv(
@@ -616,7 +574,7 @@ int main(int argc, char** argv) {
                 MPI_ANY_TAG,
                 MPI_COMM_WORLD,
                 &status);
-            //printf("rank %d: Recv x finished \n",rank);
+
             if(status.MPI_TAG == 3){
                 printf("rank %d: Recieved signal. Finishing the process \n", rank);
                 break;
@@ -635,6 +593,7 @@ int main(int argc, char** argv) {
 
     if (rank ==0)
     {   
+        int dim = (int) d;
         double *update =(double*) malloc ((3*d+2)*sizeof(double));
         double *v =(double*) malloc (d*sizeof(double));
         double *w =(double*) malloc (d*sizeof(double));
@@ -656,31 +615,31 @@ int main(int argc, char** argv) {
 
             // u = u+du (du = update[0::d-1])
             cblas_daxpy (d, 1, update, 1, u, 1);
+
             // gsum = gsum+ys (ys = update[d::2d-1])
-            //printArray(u,20);
             cblas_daxpy (d, 1, update+d, 1, gsum, 1);
-            // // v = B*ys
-            dgemv(&trans, &d, &d, &one, B, &d, update+d, &inc, &zero, v, &inc);
+
+            // v = B*ys
+            dgemv(&trans, &dim, &dim, &one, B, &dim, update+d, &inc, &zero, v, &inc);
             
             //rank 1 update of B > B = B-vv'/(alpha+v'y)
             // in algorithm, this update is stored in 'U'
-            double alpha_up = -1.0/(update[3*d]+ddot(&d, update+d, &inc, v, &inc));
-            dger(&d, &d, &alpha_up, v, &inc, v, &inc, B, &d);
+            double alpha_up = -1.0/(update[3*d]+ddot(&dim, update+d, &inc, v, &inc));
+            dger(&dim, &dim, &alpha_up, v, &inc, v, &inc, B, &dim);
 
             // w = B*q (U*q) (q = update[2d::3d-1])
-            dgemv(&trans, &d, &d, &one, B, &d, update+2*d, &inc, &zero, w, &inc);
+            dgemv(&trans, &dim, &dim, &one, B, &dim, update+2*d, &inc, &zero, w, &inc);
             
             //rank 1 update of B > B = B+w*w'/(beta-q'*w);
-            double beta_up = 1.0/(update[3*d+1]-ddot(&d, update+2*d, &inc, w, &inc));
-            dger(&d, &d, &beta_up, w, &inc, w, &inc, B, &d);
+            double beta_up = 1.0/(update[3*d+1]-ddot(&dim, update+2*d, &inc, w, &inc));
+            dger(&dim, &dim, &beta_up, w, &inc, w, &inc, B, &dim);
 
             // u_gsum = u - gsum
             // update x = B*(u-gsum)
             xpy(u, gsum, u_gsum, d);
-            dgemv(&trans, &d, &d, &one, B, &d, u_gsum, &inc, &zero, x, &inc);
+            dgemv(&trans, &dim, &dim, &one, B, &dim, u_gsum, &inc, &zero, x, &inc);
 
             if(it%freq == 0 ){
-                //printf("it/freq +1 %d\n",it/freq +1 );
                 gettimeofday(&end,NULL);
                 long seconds = end.tv_sec - start.tv_sec;
                 times[it/freq +1] = (seconds*1000)+(end.tv_usec - start.tv_usec)/1000;
@@ -719,13 +678,12 @@ int main(int argc, char** argv) {
     double *gval =(double*) malloc (d*sizeof(double));
 
     if(rank == 0){
+        int dim = (int) d;
         for (i = 0; i < (Iter-1)/freq; ++i)
     {
-        //double res = 0;
-        //printf("%d\n", i);
         double obj_value = objective_fun(cumX+i*d, vals,colidx,rowidx, descrA , y , d, m, lambda);
         gradfun(cumX+i*d , vals,colidx,rowidx, descrA, y, d ,m,  m_local,lambda, gval);
-        double grad_value = ddot(&d, gval, &inc, gval, &inc);
+        double grad_value = ddot(&dim, gval, &inc, gval, &inc);
         printf(" %ld , %.8f,%.8f \n", times[i], obj_value,grad_value);
     }
     }
@@ -736,7 +694,6 @@ int main(int argc, char** argv) {
     free(y);
     free(B);
     
-
     
     return 0;
 }

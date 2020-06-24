@@ -19,6 +19,7 @@ void printArray(double *arr, int n){
 
 }
 
+// helper function to get max and min of columns(features)
 void getMaxMin(int *colidx, double *vals, int d, int nnz, int m,  double *max, double *min, int *nnzArray){
     int i;
     for (i = 0; i < d; ++i)
@@ -55,8 +56,9 @@ void getMaxMin(int *colidx, double *vals, int d, int nnz, int m,  double *max, d
         if(min[i]>1e8)
             min[i]=0.0;
     }
-    //printArray(min,d);
 }
+
+// normalize dataset between 0 and 1
 void normalize(int *colidx, double *vals, int d, int nnz, double* max, double *min){
     int i;
 
@@ -67,34 +69,32 @@ void normalize(int *colidx, double *vals, int d, int nnz, double* max, double *m
         {
             vals[i] = (vals[i]-min[index])/(max[index]-min[index]);
         }else{
-           vals[i] = (vals[i]-min[index]); 
-        }
-        
-    }
+         vals[i] = (vals[i]-min[index]); 
+     }
+
+ }
 
 }
-
-
 
 //  s=x-y
 void xpby(double *x, double *y, double *s, double b, int d){
-            memset(s,0,sizeof(double)*d);
-            cblas_daxpy (d, -b, y, 1, s, 1);
-            cblas_daxpy (d, 1, x, 1, s, 1);
+    memset(s,0,sizeof(double)*d);
+    cblas_daxpy (d, -b, y, 1, s, 1);
+    cblas_daxpy (d, 1, x, 1, s, 1);
 }
 
-
+// gradient function for logistic regression
 void gradfun(double *x,
     double *vals,
     int *colidx,
     int *rowidx,
     char *descr ,
     double *y ,
-     int d,
-     int m,
-     int m_local,
-     double lambda,
-     double *g){
+    int d,
+    int m,
+    int m_local,
+    double lambda,
+    double *g){
 
     double alpha = 1.0;
     double nalpha = -1.0;
@@ -106,25 +106,24 @@ void gradfun(double *x,
     double *v = (double*) malloc (m_local*sizeof(double));
     double *e = (double*) malloc (m_local*sizeof(double));
     double *ep1 = (double*) malloc (m_local*sizeof(double));
+    
     // op: Ax = A*x
-   
-    // mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,
-    //     alpha, csrA, descr, x, zero, Ax);
     char trans ='N';
     mkl_dcsrmv (&trans
         , &m_local
-         , &d
-          , &alpha
-           , descr
-            , vals
-             , colidx
-              , rowidx
-               , rowidx+1
-                , x
-                 , &zero
-                  , Ax );
+        , &d
+        , &alpha
+        , descr
+        , vals
+        , colidx
+        , rowidx
+        , rowidx+1
+        , x
+        , &zero
+        , Ax );
     // op: v = Ax.*y
     vdMul( m_local, Ax, y, v );
+
     // op: e = exp(v)
     vdExp( m_local, v, e );
 
@@ -133,25 +132,25 @@ void gradfun(double *x,
     {
         ep1[i] = 1.0/(1 + e[i]);
     }
+
     //op: v = y.*ep1
     vdMul( m_local, y, ep1, v );
 
     // op: g = -A*vs
-    // mkl_sparse_d_mv(SPARSE_OPERATION_TRANSPOSE,
-    //      nalpha, csrA, descr, v, zero, g);
     char transa ='T';
     mkl_dcsrmv (&transa 
         , &m_local
-         , &d
-          , &nalpha
-           , descr
-            , vals
-             , colidx
-              , rowidx
-               , rowidx+1
-                , v
-                 , &zero
-                  , g );
+        , &d
+        , &nalpha
+        , descr
+        , vals
+        , colidx
+        , rowidx
+        , rowidx+1
+        , v
+        , &zero
+        , g );
+
     double a = lambda;
     double b = 1.0/m_local;
     cblas_daxpby (d, a, x, inc, b, g, inc);
@@ -164,7 +163,7 @@ void gradfun(double *x,
 }
 
 
-
+// helper function(not used)
 void gradfunSample(double *x,
     double *vals,
     int *colidx,
@@ -172,11 +171,11 @@ void gradfunSample(double *x,
     int *pointerE,
     char *descr ,
     double *y ,
-     int d,
-     int m,
-     int m_local,
-     double lambda,
-     double *g){
+    int d,
+    int m,
+    int m_local,
+    double lambda,
+    double *g){
 
     double alpha = 1.0;
     double nalpha = -1.0;
@@ -189,22 +188,22 @@ void gradfunSample(double *x,
     double *e = (double*) malloc (m_local*sizeof(double));
     double *ep1 = (double*) malloc (m_local*sizeof(double));
     // op: Ax = A*x
-   
+
     // mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,
     //     alpha, csrA, descr, x, zero, Ax);
     char trans ='N';
     mkl_dcsrmv (&trans
         , &m_local
-         , &d
-          , &alpha
-           , descr
-            , vals
-             , colidx
-              , pointerB
-               , pointerE
-                , x
-                 , &zero
-                  , Ax );
+        , &d
+        , &alpha
+        , descr
+        , vals
+        , colidx
+        , pointerB
+        , pointerE
+        , x
+        , &zero
+        , Ax );
     // op: v = Ax.*y
     vdMul( m_local, Ax, y, v );
     // op: e = exp(v)
@@ -224,16 +223,16 @@ void gradfunSample(double *x,
     char transa ='T';
     mkl_dcsrmv (&transa 
         , &m_local
-         , &d
-          , &nalpha
-           , descr
-            , vals
-             , colidx
-              , pointerB
-               , pointerE
-                , v
-                 , &zero
-                  , g );
+        , &d
+        , &nalpha
+        , descr
+        , vals
+        , colidx
+        , pointerB
+        , pointerE
+        , v
+        , &zero
+        , g );
     double a = lambda;
     double b = 1.0/m_local;
     cblas_daxpby (d, a, x, inc, b, g, inc);
@@ -245,6 +244,7 @@ void gradfunSample(double *x,
 
 }
 
+// objective function for logisyic regression
 double objective_fun(double *x,
     double *vals,
     int *colidx,
@@ -260,29 +260,26 @@ double objective_fun(double *x,
     double *nAx = (double*) malloc (m*sizeof(double));
     double *v = (double*) malloc (m*sizeof(double));
     double *e = (double*) malloc (m*sizeof(double));
+    
     // op: nAx = -A*x
     // op: v = nAx.*y
     // op: e = exp(v)
-    // mkl_sparse_d_mv(SPARSE_OPERATION_NON_TRANSPOSE,
-    //     nalpha, csrA, descr, x, zero, nAx);
     char transa ='N';
     mkl_dcsrmv (&transa 
         , &m
-         , &d
-          , &nalpha
-           , descr
-            , vals
-             , colidx
-              , rowidx
-               , rowidx+1
-                , x
-                 , &zero
-                  , nAx );
+        , &d
+        , &nalpha
+        , descr
+        , vals
+        , colidx
+        , rowidx
+        , rowidx+1
+        , x
+        , &zero
+        , nAx );
 
     vdMul( m, nAx, y, v );
     vdExp( m, v, e );
-
-    
 
     // op: v = ln(e+1)
     vdLog1p( m, e, v );
@@ -327,16 +324,16 @@ double objective_funSample(double *x,
     char transa ='N';
     mkl_dcsrmv (&transa 
         , &m
-         , &d
-          , &nalpha
-           , descr
-            , vals
-             , colidx
-              , pointerB
-               , pointerE
-                , x
-                 , &zero
-                  , nAx );
+        , &d
+        , &nalpha
+        , descr
+        , vals
+        , colidx
+        , pointerB
+        , pointerE
+        , x
+        , &zero
+        , nAx );
 
     vdMul( m, nAx, y, v );
     vdExp( m, v, e );
@@ -369,21 +366,22 @@ static char* readline(FILE *input)
   if(fgets(line,max_line_len,input) == NULL)
     return NULL;
 
-  while(strrchr(line,'\n') == NULL)
-    {
-      max_line_len *= 2;
-      line = (char *) realloc(line,max_line_len);
-      len = (int) strlen(line);
-      if(fgets(line+len,max_line_len-len,input) == NULL)
-        break;
-    }
-  return line;
+while(strrchr(line,'\n') == NULL)
+{
+  max_line_len *= 2;
+  line = (char *) realloc(line,max_line_len);
+  len = (int) strlen(line);
+  if(fgets(line+len,max_line_len-len,input) == NULL)
+    break;
+}
+return line;
 }
 
+// helper function to read dataset
 void readgg(char* fname, int *rowidx,int *colidx,
     double *vals,double *y , int *nnz_local, int *m_local, int* nnzArray)
 {
-    
+
     int i;
     FILE * file;
     file = fopen(fname, "r");
@@ -402,55 +400,42 @@ void readgg(char* fname, int *rowidx,int *colidx,
     i = 0;
     
     
-      while (1)
+    while (1)
     {
-      if(readline(file)==NULL){
-        //printf("NULL pointer\n");
-        break;
-      }
 
-      char *label, *value, *index, *endptr;
-      label = strtok(line," \t\n");
-      x = strtod(label, &endptr);
-      while(1)
-        {
-          index = strtok(NULL,":");
-          
-          value = strtok(NULL," \t");
-
-          if(value == NULL){
+        if(readline(file)==NULL){
             break;
-          }
-
-          cols = (int) strtol(index,&endptr,10);
-          // if(cols==NULL){
-          //   printf("WTF3\n");
-          // }
-          //colidx.push_back(cols-1);
-          colidx[count_colidx]=cols;
-          nnzArray[cols-1]++;
-            //printf("%d\n",cols );
-
-          val =  strtod(value, &endptr);
-          // if(val==NULL){
-          //   printf("WTF4\n");
-          // }
-          //vals.push_back(val);
-          vals[count_colidx]=val;
-          //printf("%d\n",count_colidx );
-        count_colidx++;
-          i++;
         }
-      count_rowidx++;
-      rowidx[count_rowidx]=i+1;
-    //printf("%d\n",count_rowidx );
 
-      y[count_rowidx-1]=x;
+        char *label, *value, *index, *endptr;
+        label = strtok(line," \t\n");
+        x = strtod(label, &endptr);
+        while(1)
+        {
+
+            index = strtok(NULL,":");
+            value = strtok(NULL," \t");
+
+            if(value == NULL){
+                break;
+            }
+
+            cols = (int) strtol(index,&endptr,10);
+            colidx[count_colidx]=cols;
+            nnzArray[cols-1]++;
+            val =  strtod(value, &endptr);
+            vals[count_colidx]=val;
+            count_colidx++;
+            i++;
+        }
+        count_rowidx++;
+        rowidx[count_rowidx]=i+1;
+
+        y[count_rowidx-1]=x;
     }
     *nnz_local = count_colidx;
     *m_local = count_rowidx;
-  fclose(file);
-  //printf("DONE\n");
+    fclose(file);
 }
 
 
@@ -469,7 +454,7 @@ int main(int argc, char** argv) {
 
     // Print off a hello world message
     printf("rank %d: started\n",
-     rank);
+       rank);
     if(world_size<2){
         printf("%s\n", "There should be at least two processors!");
         MPI_Finalize();
@@ -479,8 +464,10 @@ int main(int argc, char** argv) {
 
 
 // INPUT
+    // p is the inner iterations on local workers
+    // refer to DAve-RPG for more details
     if(argc<10){
-        printf("Input Format: pathname nrows nnz ncols iterations lambda eta p [freq of printing]\n");
+        printf("Input Format: pathname #rows #nnz #cols #iterations lambda eta p freq\n");
         MPI_Finalize();
         return 0;
     }
@@ -491,26 +478,25 @@ int main(int argc, char** argv) {
     int Iter = atoi(argv[5]);
     double lambda = atof(argv[6]);
     double eta = atof(argv[7]);
-    int p = atoi(argv[8]);
+    int p = atoi(argv[8]); 
     int freq = atoi(argv[9]);
-    //char* fileName = argv[2];
-    //int partition = atoi(argv[3]);
+
     if(rank==0){
         printf("lambda is %f\n",lambda );
         printf("Iter is %d\n",Iter );
         printf("eta is %f\n",eta );
         printf("p is %d\n",p );
     }
-        double one = 1.0;
-        int j;
-        MKL_INT inc = 1;
-        double zero = 0.0;
-        char trans = 'N';
-        int cumX_size = (Iter)/freq +20;
+    double one = 1.0;
+    int j;
+    MKL_INT inc = 1;
+    double zero = 0.0;
+    char trans = 'N';
+    int cumX_size = (Iter)/freq +20;
 
-        double L = 0.5; // initial Lipschitz constant
-        int seed = 42; // seed for line search method sampling
-        srand(seed);
+    double L = 0.5; // initial Lipschitz constant
+    int seed = 42; // seed for line search method sampling
+    srand(seed);
 
     double *cumX = (double *) malloc((cumX_size*d)*sizeof(double));
     long *times = (long*) malloc((cumX_size)*sizeof(long));
@@ -530,8 +516,6 @@ int main(int argc, char** argv) {
 
     
     // Descriptor of main sparse matrix properties
-    // struct matrix_descr descrA;
-    // descrA.type = SPARSE_MATRIX_TYPE_GENERAL;
     descrA[0]='G';
     descrA[3]='F';
 
@@ -541,15 +525,11 @@ int main(int argc, char** argv) {
     double *gsum = (double*) malloc (d*sizeof(double));
     memset(g, 0, sizeof(double)*d);
     memset(gsum, 0, sizeof(double)*d);
-    // handle to input matrix
-    // sparse_matrix_t       csrA;
 
     //Initialization
     double *x = (double*) malloc (d*sizeof(double));
     memset(x, 0, sizeof(double)*d);
-
-    
-    
+ 
     // max and min of the dataset for normalization    
     double *max = (double *) malloc(d*sizeof(double));
     double *min = (double *) malloc(d*sizeof(double));
@@ -570,7 +550,6 @@ int main(int argc, char** argv) {
         strcat(pathName,buf);
         
         readgg(pathName, rowidx, colidx, vals, y, &nnz_local, &m_local, nnzArray);
-        // Create handle with matrix stored in CSR format
         
         // normalizing the matrix between 0 and 1
         // first we get the max and min of local dataset
@@ -582,9 +561,9 @@ int main(int argc, char** argv) {
     
     // get the maximum and minimum over all processors
     MPI_Allreduce(min, minAll, d, MPI_DOUBLE, MPI_MIN,
-           MPI_COMM_WORLD);
+     MPI_COMM_WORLD);
     MPI_Allreduce(max, maxAll, d, MPI_DOUBLE, MPI_MAX,
-           MPI_COMM_WORLD);
+     MPI_COMM_WORLD);
 
     if (rank>0)
     {
@@ -592,14 +571,6 @@ int main(int argc, char** argv) {
         // which contain the max and min for each column
 
         normalize(colidx, vals, d, nnz_local, maxAll, minAll);
-
-        // mkl_sparse_d_create_csr ( &csrA, SPARSE_INDEX_BASE_ONE,
-        //                             m_local,  // number of rows
-        //                             d,  // number of cols
-        //                             rowidx,
-        //                             rowidx+1,
-        //                             colidx,
-        //                             vals );
         // initial gradients 
         gradfun(x , vals,colidx,rowidx, descrA, y, d ,m, m_local,lambda, g);
 
@@ -608,47 +579,38 @@ int main(int argc, char** argv) {
 
         // just for objective calculation
         // we don't need this for performance evaluation:
-       readgg(pathName, rowidx, colidx, vals, y, &nnz_local, &m_local,nnzArray);
-        normalize(colidx, vals, d, nnz_local, maxAll, minAll);
-        // Create handle with matrix stored in CSR format
-        // mkl_sparse_d_create_csr ( &csrA, SPARSE_INDEX_BASE_ONE,
-        //                             m_local,  // number of rows
-        //                             d,  // number of cols
-        //                             rowidx,
-        //                             rowidx+1,
-        //                             colidx,
-        //                             vals );
-    
-    }
+     readgg(pathName, rowidx, colidx, vals, y, &nnz_local, &m_local,nnzArray);
+     normalize(colidx, vals, d, nnz_local, maxAll, minAll);
+ }
 
-    MPI_Allreduce(g, gsum, d, MPI_DOUBLE, MPI_SUM,
-           MPI_COMM_WORLD);
+ MPI_Allreduce(g, gsum, d, MPI_DOUBLE, MPI_SUM,
+     MPI_COMM_WORLD);
 
     // new initial condition: which is one step gradeint descent
     // [could be removed most likely]
-    double neta= -eta/(world_size-1);
-    cblas_daxpy (d, neta, gsum, 1, x, 1);
-    
-    //start timing
-    if(rank ==0){
-        memcpy (cumX, x, d*sizeof(double)); 
-        gettimeofday(&start,NULL);
-        times[0] = 0;
-    }
+ double neta= -eta/(world_size-1);
+ cblas_daxpy (d, neta, gsum, 1, x, 1);
 
-    if(rank>0){
-        double *delta =(double*) malloc (d*sizeof(double));
-        double *z =(double*) malloc (d*sizeof(double));
-        double *xplus =(double*) malloc (d*sizeof(double));
-        double *xplus_x =(double*) malloc (d*sizeof(double));
-        double *xbar =(double*) malloc (d*sizeof(double));
-            
-        // Line search vectors and initilization
-        // b_size: the batch size for line search method [default =1 ]
-        int b_size = 1;
-        double *gLineSearch = (double*) malloc (d*sizeof(double));
-        int *pointerE = (int*) malloc (b_size*sizeof(int));
-        int *pointerB = (int*) malloc (b_size*sizeof(int));
+    //start timing
+ if(rank ==0){
+    memcpy (cumX, x, d*sizeof(double)); 
+    gettimeofday(&start,NULL);
+    times[0] = 0;
+}
+
+if(rank>0){
+    double *delta =(double*) malloc (d*sizeof(double));
+    double *z =(double*) malloc (d*sizeof(double));
+    double *xplus =(double*) malloc (d*sizeof(double));
+    double *xplus_x =(double*) malloc (d*sizeof(double));
+    double *xbar =(double*) malloc (d*sizeof(double));
+
+    // Line search vectors and initilization
+    // b_size: the batch size for line search method [default =1 ]
+    int b_size = 1;
+    double *gLineSearch = (double*) malloc (d*sizeof(double));
+    int *pointerE = (int*) malloc (b_size*sizeof(int));
+    int *pointerB = (int*) malloc (b_size*sizeof(int));
         double *var1 =(double*) malloc (d*sizeof(double)); //temp variable
         double obj_valueKplus = 1;
         double obj_valueK = 0 ;
@@ -658,11 +620,9 @@ int main(int argc, char** argv) {
             memset(delta, 0, d*sizeof(double));
             memcpy (xbar, x, d*sizeof(double)); 
 
-
             // ********** Line search method
-
             while(obj_valueKplus > obj_valueK){
-                // chose a sample
+                // choose a sample
                 L=L*2;
                 for (j = 0; j < b_size; ++j)
                 {
@@ -670,7 +630,7 @@ int main(int argc, char** argv) {
                     pointerB[j] = rowidx[ind];
                     pointerE[j] = rowidx[ind+1];
                 }
-            
+
                 gradfunSample(xbar , vals, colidx, pointerB,pointerE, descrA, y, d ,m, b_size,lambda, gLineSearch);
                 xpby(xbar, gLineSearch, var1, 1.0/L, d);
                 obj_valueKplus = objective_funSample(var1, vals,colidx,pointerB,pointerE, descrA , y , d, b_size, lambda);
@@ -727,7 +687,7 @@ int main(int argc, char** argv) {
                 MPI_ANY_TAG,
                 MPI_COMM_WORLD,
                 &status);
-            //printf("rank %d: Recv x finished \n",rank);
+
             if(status.MPI_TAG == 3){
                 printf("rank %d: Recieved signal. Finishing the process \n", rank);
                 break;
@@ -750,24 +710,23 @@ int main(int argc, char** argv) {
     if (rank ==0)
     {   
         double *delta =(double*) malloc (d*sizeof(double));
-     
+
         int it = 0;
         while(it < Iter){
             MPI_Status status;
             MPI_Recv(
-            delta,
-            d,
-            MPI_DOUBLE,
-            MPI_ANY_SOURCE,
-            0,
-            MPI_COMM_WORLD,
-            &status);
+                delta,
+                d,
+                MPI_DOUBLE,
+                MPI_ANY_SOURCE,
+                0,
+                MPI_COMM_WORLD,
+                &status);
 
             // op: x = x + delta
             cblas_daxpy (d, 1, delta, 1, x, 1);
 
             if(it%freq == 0 ){
-                //printf("it/freq +1 %d\n",it/freq +1 );
                 gettimeofday(&end,NULL);
                 long seconds = end.tv_sec - start.tv_sec;
                 times[it/freq +1] = (seconds*1000)+(end.tv_usec - start.tv_usec)/1000;
@@ -787,7 +746,7 @@ int main(int argc, char** argv) {
             }
             
 
-        it++;
+            it++;
         }
         free(delta);
 
@@ -798,19 +757,17 @@ int main(int argc, char** argv) {
     MPI_Finalize();
 
     // the next 2 lines are for computing the objective function
-    // to report later
-    
+    // to report later    
     double *gval =(double*) malloc (d*sizeof(double));
     if(rank == 0){
         for (i = 0; i < (Iter-1)/freq; ++i)
-    {
-        //double res = 0;
-        //printf("%d\n", i);
-        double obj_value = objective_fun(cumX+i*d, vals,colidx,rowidx, descrA , y , d, m, lambda);
-        gradfun(cumX+i*d , vals,colidx,rowidx, descrA, y, d ,m,  m_local,lambda, gval);
-        double grad_value = ddot(&d, gval, &inc, gval, &inc);
-        printf(" %ld , %.8f,%.8f \n", times[i], obj_value,grad_value);
-    }
+        {
+
+            double obj_value = objective_fun(cumX+i*d, vals,colidx,rowidx, descrA , y , d, m, lambda);
+            gradfun(cumX+i*d , vals,colidx,rowidx, descrA, y, d ,m,  m_local,lambda, gval);
+            double grad_value = ddot(&d, gval, &inc, gval, &inc);
+            printf(" %ld , %.8f,%.8f \n", times[i], obj_value,grad_value);
+        }
     }
     return 0;
 }

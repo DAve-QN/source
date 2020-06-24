@@ -1,0 +1,1 @@
+mpirun -np 2 ../giant.o ../dataset/mnist 60000 9994156 780 100 1 1
