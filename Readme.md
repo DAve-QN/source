@@ -8,9 +8,9 @@ We also provide a MATLAB implementation of DAve-QN for further use.
 
 ## Requirements
 
-Intel MKL 11.1.2
-MVAPICH2/2.1
-mpicc 14.0.2
+- Intel MKL 11.1.2
+- MVAPICH2/2.1
+- mpicc 14.0.2
 
 
 ## Compilation
