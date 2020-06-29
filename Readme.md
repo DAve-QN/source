@@ -39,15 +39,14 @@ This will run dave_qn on `mnist` dataset with 3 processors (2 workers and 1 mast
 
 mpirun -np [number of processors] [path] [nrows] [nnz] [ncols] [iterations] [lambda] [gamma] [freq]
 
-path: full path to the dataset
-nrows: number of samples in the dataset
-nnz: number of non-zeros in the dataset
-ncols: number of columns in the dataset
-iterations: number if iterations to run
-lambda: regularization parameter
-gamma: initial step size for better initialization – this should be very small, usually 1e-3 or 1e-4.  
-Freq: frequency of computing objective function and printing the output. If you are running the program for many iterations, it is better to set this to higher values like 10, 100 or more depending on iterations.
-
+- path: full path to the dataset
+- nrows: number of samples in the dataset
+- nnz: number of non-zeros in the dataset
+- ncols: number of columns in the dataset
+- iterations: number if iterations to run
+- lambda: regularization parameter
+- gamma: initial step size for better initialization – this should be very small, usually 1e-3 or 1e-4.  
+- Freq: frequency of computing objective function
 
 A simple bash file is provided that can run mnist on 2 workers and one master. In order to run, mnist dataset has to be split in two and put in a directory called dataset next to the code. Therefore,  dataset folder should contain mnist, mnist-0 and mnist-1 which are respectively the main dataset, the first split and the second split. Then, you can simply run the code using:
 
